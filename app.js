@@ -27,7 +27,7 @@ app.get("/ping", (req, res) => {
         message: "server is healthy😉"
     });
 });
-app.use("/users", require("./src/users/user.model"))
+app.use("/users", require("./routes/users"));
 app.listen(PORT, () => {
     console.log("Server started listening on PORT : " + PORT);
 });

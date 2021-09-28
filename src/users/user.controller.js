@@ -2,7 +2,7 @@ const Joi = require('joi');
 require('dotenv').config();
 const {v4: uuid} = require('uuid');
 
-const { sendEmail } = require('../helpers/mailers');
+const { sendEmail } = require('../users/helpers/mailers');
 
 // validate user schema 
 const userSchema = Joi.object().keys({
@@ -10,7 +10,7 @@ const userSchema = Joi.object().keys({
     password: Joi.string().required().min(4),
     confirmPassword: Joi.string().valid(Joi.ref("password")).required(),
 });
-exports.signup = async (req, res) => {
+exports.Signup = async (req, res) => {
     try {
         const result = userSchema.validate(req.body);
         if (result.error) {
@@ -47,17 +47,17 @@ exports.signup = async (req, res) => {
         if (sendCode.error) {
             return res.status(500).json({
                 error: true,
-                message: "Couldn't send verification email",
+                message: "⭕Couldn't send verification email⭕",
             });
         }
-        results.value.email = code;
-        results.value.emailTokenExpiries = new Date(expiry);
-        const newUser = new User(result.value)
+        result.value.email = code;
+        result.value.emailTokenExpires = new Date(expiry);
+        const newUser = new user(result.value)
         await newUser.save();
 
         return res.status(200).json({
             success: true,
-            message: "Registration Success",
+            message: "Registration Success✔️✔️✔️",
         });
     } catch (error) {
         console.log("Signup-error", error);
@@ -67,13 +67,13 @@ exports.signup = async (req, res) => {
         });
     }
 };
-exports.login = async (req, res) => {
+exports.Login = async (req, res) => {
     try {
         const { email, password } = req.body;
         if (email || !password) {
             return res.status(400).json({ 
                 error: true, 
-                message: "Cannot authenticate user"
+                message: "Cannot authenticate user❗❗"
             });
         } 
         // 1.Check if account exists on DB
@@ -97,22 +97,21 @@ exports.login = async (req, res) => {
         if (!isValid) {
             return res.status(400).json({
                 error: true, 
-                message: "Invalid password"
+                message: "Invalid password❗❗"
             });
         }
-/****************************************************************************************************************************************************/
         await user.save();
         // success
         return res.send({
             success: true,
-            message: "User logged in successfully",
+            message: "User logged in successfully🔥🔥🔥",
             access_token: token, //send it to the client 
         });
     } catch (err) {
         console.error("Login Error", err);
         return res.status(500).json({
             error: true,
-            message: "invalid login. please try again later."
+            message: "invalid login. please try again later❌❌."
         });
     }
 };
@@ -125,7 +124,7 @@ exports.Activate = async (req, res) => {
             return res.json({
                 error: true,
                 status: 400,
-                message: "Please make a Valid request",
+                message: "Please make a Valid request❗❗",
             });
         }
         const user = await User.findOne({ 
@@ -136,12 +135,12 @@ exports.Activate = async (req, res) => {
         if (!user) {
             return res.status(400).json({
                 error: true,
-                message: 'Invalid user details'
+                message: 'Invalid user details❎❎'
             });
         } else if (user.active)
         return res.send({
             error: true,
-            message: 'Account already activated',
+            message: '🟢Account already activated✔️✔️',
             status: '400',
         });
 
@@ -153,7 +152,7 @@ exports.Activate = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: 'Account activated',
+            message: 'Account activated☑️☑️',
         });
     } catch (error) {
         console.log("Activation error", error);
