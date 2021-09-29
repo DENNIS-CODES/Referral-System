@@ -3,13 +3,14 @@ require('dotenv').config();
 const {v4: uuid} = require('uuid');
 
 const { sendEmail } = require('../users/helpers/mailers');
+const User = require("../users/user.model")
 
 // validate user schema 
 const userSchema = Joi.object().keys({
     email: Joi.string().email({ minDomainSegments: 2 }),
     password: Joi.string().required().min(4),
     confirmPassword: Joi.string().valid(Joi.ref("password")).required(),
-});
+  });
 exports.Signup = async (req, res) => {
     try {
         const result = userSchema.validate(req.body);
@@ -23,7 +24,7 @@ exports.Signup = async (req, res) => {
         }
         //Check if email is already registered
         var user = await User.findOne({ 
-            email: req.body.email,
+            email: result.value.email,
         });
         if (user) {
             return res.json({ 
@@ -43,16 +44,16 @@ exports.Signup = async (req, res) => {
         let code = Math.floor(100000 + Math.random() * 900000); //Generate random 6 digit code
         let expiry = Date.now() + 60 * 1000 * 15; //set expiry to 15min ahead from now
 
-        const sendCode = await sendEmail(result.value.email, code, expiry);
+        const sendCode = await sendEmail(result.value.email, code);
         if (sendCode.error) {
             return res.status(500).json({
                 error: true,
                 message: "⭕Couldn't send verification email⭕",
             });
         }
-        result.value.email = code;
+        result.value.emailToken = code;
         result.value.emailTokenExpires = new Date(expiry);
-        const newUser = new user(result.value)
+        const newUser = new User(result.value)
         await newUser.save();
 
         return res.status(200).json({
