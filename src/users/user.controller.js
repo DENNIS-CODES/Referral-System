@@ -94,7 +94,7 @@ exports.Login = async (req, res) => {
             });
         }
         //  3. Verify the password is valid
-        const isValid = await User.comparePasswords(password, user.password);
+        const isValid = await User.comparePassword(password, user.password);
         if (!isValid) {
             return res.status(400).json({
                 error: true, 
@@ -210,13 +210,13 @@ exports.ForgotPassword = async (req, res) => {
     }
 };
 
-exports.resetPassword = async (req, res) => {
+exports.ResetPassword = async (req, res) => {
     try {
         const { token, newPassword, confirmPassword } = req.body;
         if (!token || !newPassword || !confirmPassword) {
             return res.status(403).json({
                 error: true,
-                message: "Couldn't process request. please provide the mandatory fields"
+                message: "Couldn't process request. please provide the mandatory fields↩️"
             });
         }
 
@@ -233,7 +233,7 @@ exports.resetPassword = async (req, res) => {
         if (newPassword !== confirmPassword) {
             return res.send(403).json({
                 error: true,
-                message: "Passwords didn't match"
+                message: "Passwords didn't match⛔"
             });
         }
         const hash = await User.hashPassword(req.body, newPassword);
@@ -245,7 +245,7 @@ exports.resetPassword = async (req, res) => {
 
         return res.send({
             success: true,
-            message: "Password has been Changed successfully"
+            message: "Password has been Changed successfully✔️✔️"
         })
     } catch (error) {
         console.error("reset-password-error", error);

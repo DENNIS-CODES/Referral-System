@@ -20,6 +20,7 @@ const userSchema = new Schema(
         },
     }
 );
+
 const User = mongoose.model('User', userSchema);
 module.exports = User;
 
@@ -29,5 +30,13 @@ module.exports.hashPassword = async (password) => {
         return await bcryptjs.hash(password, salt);
     } catch (error) {
         throw new Error("Hashing failed", error);
+    }
+};
+
+module.exports.comparePassword = async (inputPassword, hashedPassword) => {
+    try {
+        return await bcryptjs.compare(inputPassword, hashedPassword);
+    } catch (error) {
+        throw new Error("Comparison failed", error);
     }
 };
