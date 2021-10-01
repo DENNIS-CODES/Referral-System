@@ -1,15 +1,21 @@
 const Joi = require('joi');
 require('dotenv').config();
 const {v4: uuid} = require('uuid');
+const { customAlphabet: generate } = require("nanoid");
 
+const { generateJwt } = require('./helpers/generateJwt')
 const { sendEmail } = require('../users/helpers/mailers');
 const User = require("../users/user.model")
 
+const CHARACTER_SET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const REFERRAL_CODE_LENGTH = 8;
+const referralCode = generate(CHARACTER_SET, REFERRAL_CODE_LENGTH);
 // validate user schema 
 const userSchema = Joi.object().keys({
     email: Joi.string().email({ minDomainSegments: 2 }),
     password: Joi.string().required().min(4),
     confirmPassword: Joi.string().valid(Joi.ref("password")).required(),
+    referrer: Joi.string(),
   });
 exports.Signup = async (req, res) => {
     try {
@@ -53,18 +59,33 @@ exports.Signup = async (req, res) => {
         }
         result.value.emailToken = code;
         result.value.emailTokenExpires = new Date(expiry);
+        // Check if referred and validate sendCode
+        if (result.value.hasOwnProperty("referrer")) {
+            let referrer = await User.findOne({
+                referralCode: result.value.referrer,
+            });
+        
+        if (!referrer) {
+            return res.status(400).send({
+                error: true,
+                message: "invalid referral code.",
+            });
+        }
+    }
+    result.value.referralCode = referralCode(); //Generate referral code for the new user
         const newUser = new User(result.value)
         await newUser.save();
 
         return res.status(200).json({
             success: true,
             message: "Registration Success✔️✔️✔️",
+            referralCode: result.value.referralCode,
         });
     } catch (error) {
         console.log("Signup-error", error);
         return res.status(500).json({
             error: true,
-            message: "Couldn't signup'"
+            message: "Couldn't signup"
         });
     }
 };
@@ -101,11 +122,22 @@ exports.Login = async (req, res) => {
                 message: "Invalid password❗❗"
             });
         }
+        // Generating Access Token
+        const { error, token } = await generateJwt(user.email, user.userId);
+        if (error) {
+            return res.status(500).json({
+                error: true,
+                message:"Couldn't create access token. Please try again later"
+            });
+        }
+        user.accessToken = token;
+
         await user.save();
         // success
         return res.send({
             success: true,
-            message: "User logged in successfully🔥🔥🔥", 
+            message: "User logged in successfully🔥🔥🔥",
+            accessToken: token, 
         });
     } catch (err) {
         console.error("Login Error", err);
@@ -251,6 +283,48 @@ exports.ResetPassword = async (req, res) => {
         console.error("reset-password-error", error);
         return res.status(500).json({
             error: true,
+            message: error.message,
+        });
+    }
+};
+
+exports.ReferredAccounts = async (req, res) => {
+    try {
+        const { id, referralCode } = req.decode;
+
+        const referredAccounts = await User.find(
+            { referrer: referralCode },
+            { email: 1, referralCode: 1, _id: 0 }
+        );
+        return res.send({
+            success: true,
+            accounts: referredAccounts,
+            total: referredAccounts.length,
+        });
+    } catch (error) {
+        console.error("fetch-referred-error", error);
+        return res.stat(500).json({
+            error: true,
+            message: error.message,
+        });
+    }
+};
+
+exports.Logout = async (req, res) => {
+    try {
+        const { id } = req.decoded;
+        let user = await User.findOne({ userId: id });
+        user.accessToken = "";
+        await user.save();
+        return res.send({
+            success: true,
+            message: "User Logged out successfully",
+        });
+    } catch (error) {
+        console.error("user-logout-error", error);
+        return res.sat(500).json({
+            error: true,
+
             message: error.message,
         });
     }

@@ -12,6 +12,9 @@ const userSchema = new Schema(
         resetPasswordExpires: { type: Date, default: null },
         emailToken: { type: String, default: null },
         emailTokenExpires: { type: Date, default: null },
+        accessToken: { type: String, default: null },
+        referralCode: { type: String, unique: true },
+        referrer: { type: String, default: null }
     },
     {
         timestamps: {
