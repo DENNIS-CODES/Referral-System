@@ -10,85 +10,89 @@ const User = require("../users/user.model")
 const CHARACTER_SET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 const REFERRAL_CODE_LENGTH = 8;
 const referralCode = generate(CHARACTER_SET, REFERRAL_CODE_LENGTH);
-// validate user schema 
+// validate user schema        
 const userSchema = Joi.object().keys({
     email: Joi.string().email({ minDomainSegments: 2 }),
-    password: Joi.string().required().min(4),
-    confirmPassword: Joi.string().valid(Joi.ref("password")).required(),
-    referrer: Joi.string(),
+    password: Joi.string().min(4),
+    confirmPassword: Joi.string().valid(Joi.ref("password")),
   });
-exports.Signup = async (req, res) => {
+
+  exports.Signup = async (req, res) => {
     try {
-        const result = userSchema.validate(req.body);
-        if (result.error) {
-            console.log(result.error.message);
-            return res.json({ 
-                error: true,
-                status: 400,
-                message: result.error.message,
-            });
-        }
-        //Check if email is already registered
-        var user = await User.findOne({ 
-            email: result.value.email,
+      const result = userSchema.validate(req.body);
+      if (result.error) {
+        console.log(result.error.message);
+        return res.json({
+          error: true,
+          status: 400,
+          message: result.error.message,
         });
-        if (user) {
-            return res.json({ 
-                error: true,
-                message: "Email already registered"
-            });
-        }
-
-        const hash = await User.hashPassword(result.value.password);
-        const id = uuid(); //Generate unique id for the user
-        result.value.userId = id;
-
-        //remove the cconfirmedPassword field from the result as we dont need to save this in the db.
-        delete result.value.confirmPassword;
-        result.value.password = hash;
-
-        let code = Math.floor(100000 + Math.random() * 900000); //Generate random 6 digit code
-        let expiry = Date.now() + 60 * 1000 * 15; //set expiry to 15min ahead from now
-
-        const sendCode = await sendEmail(result.value.email, code);
-        if (sendCode.error) {
-            return res.status(500).json({
-                error: true,
-                message: "⭕Couldn't send verification email⭕",
-            });
-        }
-        result.value.emailToken = code;
-        result.value.emailTokenExpires = new Date(expiry);
-        // Check if referred and validate sendCode
-        if (result.value.hasOwnProperty("referrer")) {
-            let referrer = await User.findOne({
-                referralCode: result.value.referrer,
-            });
-        
-        if (!referrer) {
-            return res.status(400).send({
-                error: true,
-                message: "invalid referral code.",
-            });
-        }
-    }
-    result.value.referralCode = referralCode(); //Generate referral code for the new user
-        const newUser = new User(result.value)
-        await newUser.save();
-
-        return res.status(200).json({
-            success: true,
-            message: "Registration Success✔️✔️✔️",
-            referralCode: result.value.referralCode,
+      }
+  
+      //Check if the email has been already registered.
+      var user = await User.findOne({
+        email: result.value.email,
+      });
+  
+      if (user) {
+        return res.json({
+          error: true,
+          message: "Email is already in use",
         });
-    } catch (error) {
-        console.log("Signup-error", error);
+      }
+  
+      const hash = await User.hashPassword(result.value.password);
+  
+      const id = uuid(); //Generate unique id for the user.
+      result.value.userId = id;
+  
+      delete result.value.confirmPassword;
+      result.value.password = hash;
+  
+      let code = Math.floor(100000 + Math.random() * 900000);
+  
+      let expiry = Date.now() + 60 * 1000 * 15; //15 mins in ms
+  
+      const sendCode = await sendEmail(result.value.email, code);
+  
+      if (sendCode.error) {
         return res.status(500).json({
-            error: true,
-            message: "Couldn't signup"
+          error: true,
+          message: "Couldn't send verification email.",
         });
+      }
+      result.value.emailToken = code;
+      result.value.emailTokenExpires = new Date(expiry);
+  
+      //Check if referred and validate code.
+      if (result.value.hasOwnProperty("referrer")) {
+        let referrer = await User.findOne({
+          referralCode: result.value.referrer,
+        });
+        if (!referrer) {
+          return res.status(400).send({
+            error: true,
+            message: "Invalid referral code.",
+          });
+        }
+      }
+      result.value.referralCode = referralCode();
+      const newUser = new User(result.value);
+      await newUser.save();
+  
+      return res.status(200).json({
+        success: true,
+        message: "Registration Success",
+        referralCode: result.value.referralCode,
+      });
+    } catch (error) {
+      console.error("signup-error", error);
+      return res.status(500).json({
+        error: true,
+        message: "Cannot Register",
+      });
     }
-};
+  };
 exports.Login = async (req, res) => {
     try {
         const { email, password } = req.body;

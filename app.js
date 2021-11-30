@@ -1,8 +1,10 @@
 const mongoose = require('mongoose');
+const cors = require('cors')
 const express = require('express');
 const bodyParser = require('body-parser');
 require("dotenv").config();
 const PORT = 5000;
+const authRoutes = require('./routes/users');
 
 mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -16,6 +18,8 @@ mongoose.connect(process.env.MONGO_URI, {
 
 const app = express();
 
+app.use(express());
+app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
     extended: true
@@ -27,7 +31,7 @@ app.get("/ping", (req, res) => {
         message: "server is healthy😉"
     });
 });
-app.use("/users", require("./routes/users"));
+app.use("/users", authRoutes);
 app.listen(PORT, () => {
     console.log("Server started listening on PORT : " + PORT);
 });
